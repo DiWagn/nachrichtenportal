@@ -1,0 +1,52 @@
+name: Hallo-Welt-Testupload (nur eine TXT-Datei)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  upload:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Paramiko installieren
+        run: python3 -m pip install 'paramiko==3.5.1'
+      - name: Ausschliesslich hallo-welt.txt hochladen und kontrollieren
+        env:
+          IONOS_SFTP_HOST: ${{ secrets.IONOS_SFTP_HOST }}
+          IONOS_SFTP_USER: ${{ secrets.IONOS_SFTP_USER }}
+          IONOS_SFTP_PASSWORD: ${{ secrets.IONOS_SFTP_PASSWORD }}
+          IONOS_SFTP_HOSTKEY_SHA256: ${{ secrets.IONOS_SFTP_HOSTKEY_SHA256 }}
+        run: |
+          python3 - <<'PY'
+          import base64, hashlib, io, os
+          import paramiko
+          remote = "/nachrichten/hallo-welt.txt"
+          payload = b"Hallo Welt!\n"
+          t = paramiko.Transport((os.environ["IONOS_SFTP_HOST"], 22))
+          try:
+              t.get_security_options().key_types = ("ssh-ed25519",)
+              t.start_client(timeout=20)
+              key = t.get_remote_server_key()
+              actual = "SHA256:" + base64.b64encode(hashlib.sha256(key.asbytes()).digest()).decode().rstrip("=")
+              if actual != os.environ["IONOS_SFTP_HOSTKEY_SHA256"]:
+                  raise RuntimeError("Host-Key-Fingerprint stimmt nicht")
+              t.auth_password(os.environ["IONOS_SFTP_USER"], os.environ["IONOS_SFTP_PASSWORD"])
+              with paramiko.SFTPClient.from_transport(t) as sftp:
+                  try:
+                      sftp.stat(remote)
+                  except FileNotFoundError:
+                      pass
+                  else:
+                      raise RuntimeError("Testdatei existiert bereits; nichts ueberschrieben")
+                  with sftp.open(remote, "wb") as f:
+                      f.write(payload)
+                  with sftp.open(remote, "rb") as f:
+                      if f.read() != payload:
+                          raise RuntimeError("Ruecklesepruefung fehlgeschlagen")
+                  print("OK: /nachrichten/hallo-welt.txt hochgeladen und rueckgelesen")
+          finally:
+              t.close()
+          PY
