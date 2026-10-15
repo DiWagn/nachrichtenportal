@@ -1,0 +1,23 @@
+name: IONOS SFTP Verbindung pruefen (ohne Upload)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  preflight:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Python SFTP-Bibliothek installieren
+        run: python3 -m pip install 'paramiko==3.5.1'
+      - name: Verbindung pruefen (nur lesend)
+        env:
+          IONOS_SFTP_HOST: ${{ secrets.IONOS_SFTP_HOST }}
+          IONOS_SFTP_USER: ${{ secrets.IONOS_SFTP_USER }}
+          IONOS_SFTP_PASSWORD: ${{ secrets.IONOS_SFTP_PASSWORD }}
+          IONOS_SFTP_HOSTKEY_SHA256: ${{ secrets.IONOS_SFTP_HOSTKEY_SHA256 }}
+        run: python3 scripts/sftp_preflight.py
