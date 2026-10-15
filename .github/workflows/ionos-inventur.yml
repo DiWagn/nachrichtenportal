@@ -1,0 +1,45 @@
+name: IONOS Nachrichtenordner anzeigen (nur lesend)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  inventur:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Paramiko installieren
+        run: python3 -m pip install 'paramiko==3.5.1'
+      - name: Nachrichtenordner auf IONOS lesen
+        env:
+          IONOS_SFTP_HOST: ${{ secrets.IONOS_SFTP_HOST }}
+          IONOS_SFTP_USER: ${{ secrets.IONOS_SFTP_USER }}
+          IONOS_SFTP_PASSWORD: ${{ secrets.IONOS_SFTP_PASSWORD }}
+          IONOS_SFTP_HOSTKEY_SHA256: ${{ secrets.IONOS_SFTP_HOSTKEY_SHA256 }}
+        run: |
+          python3 - <<'PY'
+          import base64, hashlib, os, stat
+          import paramiko
+          t = paramiko.Transport((os.environ["IONOS_SFTP_HOST"], 22))
+          try:
+              t.get_security_options().key_types = ("ssh-ed25519",)
+              t.start_client(timeout=20)
+              actual = "SHA256:" + base64.b64encode(hashlib.sha256(t.get_remote_server_key().asbytes()).digest()).decode().rstrip("=")
+              if actual != os.environ["IONOS_SFTP_HOSTKEY_SHA256"]:
+                  raise RuntimeError("Host-Key-Fingerprint stimmt nicht")
+              t.auth_password(os.environ["IONOS_SFTP_USER"], os.environ["IONOS_SFTP_PASSWORD"])
+              with paramiko.SFTPClient.from_transport(t) as sftp:
+                  for directory in ("/nachrichten", "/nachrichten/berichte"):
+                      print("\nVERZEICHNIS:", directory)
+                      try:
+                          for f in sorted(sftp.listdir_attr(directory), key=lambda x: x.filename):
+                              kind = "ORDNER" if stat.S_ISDIR(f.st_mode) else "DATEI"
+                              print(f"{kind:6} {f.st_size:>10} Bytes  {f.filename}")
+                      except FileNotFoundError:
+                          print("(nicht vorhanden)")
+          finally:
+              t.close()
+          PY
