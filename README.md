@@ -1,0 +1,2 @@
+# nachrichtenportal
+Automatische Veröffentlichung des Nachrichtenportals
