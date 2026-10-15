@@ -12,6 +12,7 @@ port = int(os.getenv("IONOS_SFTP_PORT", "22"))
 
 transport = paramiko.Transport((host, port))
 try:
+    transport.get_security_options().key_types = ('ssh-ed25519',)
     transport.start_client(timeout=20)
     key = transport.get_remote_server_key()
     import base64, hashlib
