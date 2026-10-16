@@ -1,0 +1,27 @@
+name: VoltPOC mit Passwort veroeffentlichen
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: SFTP-Paket installieren
+        run: python3 -m pip install 'paramiko==3.5.1'
+      - name: Passwortgeschuetzte Seite erzeugen
+        env:
+          VOLT_POC_PASSWORD: ${{ secrets.VOLT_POC_PASSWORD }}
+        run: python3 scripts/build_volt_poc.py
+      - name: PHP pruefen und geschuetzte Seite hochladen
+        env:
+          IONOS_SFTP_HOST: ${{ secrets.IONOS_SFTP_HOST }}
+          IONOS_SFTP_USER: ${{ secrets.IONOS_SFTP_USER }}
+          IONOS_SFTP_PASSWORD: ${{ secrets.IONOS_SFTP_PASSWORD }}
+          IONOS_SFTP_HOSTKEY_SHA256: ${{ secrets.IONOS_SFTP_HOSTKEY_SHA256 }}
+        run: python3 scripts/upload_volt_poc.py
