@@ -1,0 +1,61 @@
+name: Nachrichtenanzeige diagnostizieren (nur lesen)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  pruefen:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - run: python3 -m pip install 'paramiko==3.5.1'
+      - name: Dateien auf IONOS kontrollieren
+        env:
+          IONOS_SFTP_HOST: ${{ secrets.IONOS_SFTP_HOST }}
+          IONOS_SFTP_USER: ${{ secrets.IONOS_SFTP_USER }}
+          IONOS_SFTP_PASSWORD: ${{ secrets.IONOS_SFTP_PASSWORD }}
+          IONOS_SFTP_HOSTKEY_SHA256: ${{ secrets.IONOS_SFTP_HOSTKEY_SHA256 }}
+        run: |
+          python3 - <<'PY'
+          import base64, hashlib, json, os
+          import paramiko
+          t = paramiko.Transport((os.environ["IONOS_SFTP_HOST"], 22))
+          try:
+              t.get_security_options().key_types = ("ssh-ed25519",)
+              t.start_client(timeout=20)
+              fingerprint = "SHA256:" + base64.b64encode(hashlib.sha256(t.get_remote_server_key().asbytes()).digest()).decode().rstrip("=")
+              if fingerprint != os.environ["IONOS_SFTP_HOSTKEY_SHA256"]:
+                  raise RuntimeError("Host-Key stimmt nicht")
+              t.auth_password(os.environ["IONOS_SFTP_USER"], os.environ["IONOS_SFTP_PASSWORD"])
+              with paramiko.SFTPClient.from_transport(t) as sftp:
+                  base="/nachrichten/"
+                  for name in ("index.html", "app.js", "styles.css", "berichte/index.json", "berichte/2026-10-14.json", "berichte/2026-10-15.json", "berichte/2026-10-16.json", "berichte/redaktionell-2026-10-16.json"):
+                      print("\nDATEI:", name)
+                      try:
+                          with sftp.open(base+name,"rb") as file:
+                              content=file.read()
+                          print("vorhanden:",len(content),"Bytes")
+                          if name.endswith(".json"):
+                              data=json.loads(content)
+                              print("JSON gueltig; Felder:",sorted(data) if isinstance(data,dict) else "Liste")
+                              if name=="berichte/index.json":
+                                  print("Index:",repr(data)[:1500])
+                              elif name.endswith("2026-10-16.json"):
+                                  print("Datum:", data.get("date"), "Meldungen:",len(data.get("stories",[])) if isinstance(data.get("stories",[]),list) else "?")
+                          elif name=="app.js":
+                              for marker in ("renderStories","loadIssue","Editorial text renderer","berichte/index.json","berichte/"):
+                                  print("Enthaelt",repr(marker),":",marker.encode() in content)
+                              print("app.js Ende:",content[-350:].decode("utf-8","replace"))
+                          elif name=="index.html":
+                              for marker in ("app.js","stories","issue-date"):
+                                  print("Enthaelt",repr(marker),":",marker.encode() in content)
+                      except FileNotFoundError:
+                          print("FEHLT")
+                      except Exception as e:
+                          print("PRUEFFEHLER:",type(e).__name__,str(e)[:300])
+          finally:
+              t.close()
+          PY
