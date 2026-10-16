@@ -1,0 +1,25 @@
+name: Fehlenden Nachrichten-Archivindex reparieren
+
+on:
+  push:
+    paths:
+      - ".github/workflows/repair-missing-index.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - run: python3 -m pip install 'paramiko==3.5.1'
+      - uses: actions/checkout@v4
+      - name: Nur fehlenden Archivindex herstellen
+        env:
+          IONOS_SFTP_HOST: ${{ secrets.IONOS_SFTP_HOST }}
+          IONOS_SFTP_USER: ${{ secrets.IONOS_SFTP_USER }}
+          IONOS_SFTP_PASSWORD: ${{ secrets.IONOS_SFTP_PASSWORD }}
+          IONOS_SFTP_HOSTKEY_SHA256: ${{ secrets.IONOS_SFTP_HOSTKEY_SHA256 }}
+        run: python3 scripts/repair_missing_index.py
