@@ -13,7 +13,7 @@ SECTION_NUMBER = re.compile(r"(?m)^(#{2,3})[ \t]+([1-9][0-9]*)\.[ \t]+(?=\S)")
 REQUIRED_HEADINGS = (
     "Das Wichtigste im Überblick",
     "Gesamtbewertung",
-    "Ausblick",
+    "Worauf in den nächsten Tagen zu achten ist",
     "Quellen und Verlässlichkeit",
 )
 
