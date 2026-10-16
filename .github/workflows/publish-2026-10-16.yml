@@ -1,0 +1,24 @@
+name: Archivbericht 16. Oktober veroeffentlichen
+on:
+  push:
+    paths:
+      - "berichte/2026-10-16.json"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  archiv:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 -m pip install 'paramiko==3.5.1'
+      - name: Nur 16. Oktober nach IONOS uebertragen
+        env:
+          IONOS_SFTP_HOST: ${{ secrets.IONOS_SFTP_HOST }}
+          IONOS_SFTP_USER: ${{ secrets.IONOS_SFTP_USER }}
+          IONOS_SFTP_PASSWORD: ${{ secrets.IONOS_SFTP_PASSWORD }}
+          IONOS_SFTP_HOSTKEY_SHA256: ${{ secrets.IONOS_SFTP_HOSTKEY_SHA256 }}
+        run: python3 scripts/publish_2026_10_16.py berichte/2026-10-16.json
