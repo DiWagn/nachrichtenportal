@@ -1,0 +1,37 @@
+name: Redaktionelle Originalansicht der Nachrichten veröffentlichen
+
+on:
+  push:
+    paths:
+      - ".github/workflows/deploy-editorial-view.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Paramiko installieren
+        run: python3 -m pip install 'paramiko==3.5.1'
+      - name: Redaktionelle Originalfassung kontrollieren
+        run: |
+          python3 - <<'PY'
+          import json
+          with open('berichte/redaktionell-2026-10-16.json',encoding='utf-8') as f:
+              x=json.load(f)
+          assert x['date']=='2026-10-16'
+          assert len(x['sections'])==7
+          assert x['original_markdown']
+          print('Redaktioneller Originalbericht: OK')
+          PY
+      - name: Bestehende Website-Darstellung minimal erweitern
+        env:
+          IONOS_SFTP_HOST: ${{ secrets.IONOS_SFTP_HOST }}
+          IONOS_SFTP_USER: ${{ secrets.IONOS_SFTP_USER }}
+          IONOS_SFTP_PASSWORD: ${{ secrets.IONOS_SFTP_PASSWORD }}
+          IONOS_SFTP_HOSTKEY_SHA256: ${{ secrets.IONOS_SFTP_HOSTKEY_SHA256 }}
+        run: python3 scripts/deploy_editorial.py
