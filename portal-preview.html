@@ -11,7 +11,7 @@ header{background:#fff;border-bottom:1px solid #dfe3e8}header h1{margin:0;font-s
 .choices{display:flex;flex-wrap:wrap;gap:8px}.choice{display:inline-flex;gap:7px;align-items:center;padding:7px 12px;border:1px solid #cbd2da;border-radius:30px;cursor:pointer}
 button{padding:8px 14px;border-radius:8px;border:1px solid #abb5c2;background:white;cursor:pointer}
 article{padding:24px 32px;background:#fff;border:1px solid #e0e4e9;border-radius:12px;overflow-wrap:anywhere}
-article h1{font-size:1.8rem}article h2{font-size:1.35rem;margin-top:1.8em}article p{margin:0 0 1em}
+article h1{font-size:1.5rem}article h2{font-size:1.2rem;margin-top:1.8em}article p{margin:0 0 1em}
 article table{border-collapse:collapse;width:100%;font-size:.9rem}article td,article th{padding:8px;border:1px solid #d8dde4;text-align:left}
 .table-scroll{overflow-x:auto;margin:16px 0}article hr{border:0;border-top:1px solid #d8dde4;margin:2em 0}
 article a{color:#1256a4}article ul{padding-left:1.4em}.error{color:#9a2424}
@@ -25,11 +25,13 @@ article a{color:#1256a4}article ul{padding-left:1.4em}.error{color:#9a2424}
 <label for="date">Berichtsdatum</label> <input type="date" id="date" value="2026-10-16">
 <p><strong>Themen auswählen</strong></p>
 <div id="choices" class="choices"></div>
+<p><label class="choice"><input type="checkbox" id="positive-only"> Nur Positives</label></p>
 <p><button type="button" id="all">Alle Themen</button> <button type="button" id="none">Keine Themen</button></p>
 <p id="status" role="status"></p>
 </section>
 <article id="report" aria-label="Redaktioneller Bericht"></article>
 </main>
+<footer class="wrap"><small>Impressum: Bruno &amp; Dirk Wagner</small></footer>
 <script>
 "use strict";
 const CATEGORIES=[
@@ -46,6 +48,7 @@ const status=document.getElementById("status");
 const choices=document.getElementById("choices");
 let original="";
 let sources=[];
+let storyMeta=[];
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 function inline(s){
   let out=esc(s);
@@ -79,7 +82,21 @@ function sections(s){
 }
 function selection(s){
  const parts=sections(s),names=new Map(CATEGORIES.map(([id,name])=>[name,id]));
- return parts.filter(p=>!names.has(p.heading)||selected.has(names.get(p.heading))).map(p=>p.text).join("");
+ const positiveOnly=document.getElementById("positive-only").checked;
+ if(!positiveOnly)return parts.filter(p=>!names.has(p.heading)||selected.has(names.get(p.heading))).map(p=>p.text).join("");
+ const positiveTitles=new Set(storyMeta.filter(x=>x&&x.positive===true).map(x=>x.title));
+ const output=[];
+ for(const p of parts){
+  const category=names.get(p.heading);
+  if(!category||!selected.has(category))continue;
+  const lines=p.text.split(/(?=^## )/m);
+  const kept=lines.slice(1).filter(block=>{
+   const first=block.split("\n",1)[0].replace(/^## /,"").trim();
+   return positiveTitles.has(first);
+  });
+  if(kept.length)output.push(lines[0]+kept.join(""));
+ }
+ return output.join("");
 }
 function sourcesHtml(){
  if(!sources.length)return "";
@@ -114,6 +131,7 @@ async function load(){
  }catch(e){status.textContent="Fehler: "+e.message;status.className="error";}
 }
 document.getElementById("date").addEventListener("change",load);
+document.getElementById("positive-only").addEventListener("change",render);
 load();
 </script>
 </body></html>
