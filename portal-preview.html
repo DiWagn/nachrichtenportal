@@ -45,6 +45,7 @@ const report=document.getElementById("report");
 const status=document.getElementById("status");
 const choices=document.getElementById("choices");
 let original="";
+let sources=[];
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 function inline(s){
   let out=esc(s);
@@ -80,9 +81,15 @@ function selection(s){
  const parts=sections(s),names=new Map(CATEGORIES.map(([id,name])=>[name,id]));
  return parts.filter(p=>!names.has(p.heading)||selected.has(names.get(p.heading))).map(p=>p.text).join("");
 }
+function sourcesHtml(){
+ if(!sources.length)return "";
+ const seen=new Set();
+ const links=sources.filter(s=>s&&typeof s.label==="string"&&typeof s.url==="string"&&/^https:\\/\\//.test(s.url)&&!seen.has(s.url)&&seen.add(s.url));
+ return '<section aria-label="Quellenlinks"><h2>Quellen</h2><ul>'+links.map(s=>'<li><a href="'+esc(s.url)+'" target="_blank" rel="noopener noreferrer">'+esc(s.label)+'</a></li>').join("")+"</ul></section>";
+}
 function render(){
  if(!original)return;
- report.innerHTML=markdown(selection(original));
+ report.innerHTML=markdown(selection(original))+sourcesHtml();
  status.textContent=selected.size+" von "+CATEGORIES.length+" Themen ausgewählt";
 }
 for(const [id,name] of CATEGORIES){
@@ -103,7 +110,7 @@ async function load(){
   if(!response.ok)throw Error("Bericht nicht verfügbar (HTTP "+response.status+")");
   const data=await response.json();
   if(data.date!==date||typeof data.original_markdown!=="string"||!data.original_markdown.trim())throw Error("Originalbericht fehlt oder Datum stimmt nicht");
-  original=data.original_markdown;render();
+  original=data.original_markdown;\n  sources=Array.isArray(data.quellen)?data.quellen:[];\n  if(!sources.length&&Array.isArray(data.stories))sources=data.stories.flatMap(story=>Array.isArray(story.sources)?story.sources:[]);\n  render();
  }catch(e){status.textContent="Fehler: "+e.message;status.className="error";}
 }
 document.getElementById("date").addEventListener("change",load);
