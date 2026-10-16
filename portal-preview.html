@@ -84,7 +84,7 @@ function selection(s){
 function sourcesHtml(){
  if(!sources.length)return "";
  const seen=new Set();
- const links=sources.filter(s=>s&&typeof s.label==="string"&&typeof s.url==="string"&&/^https:\\/\\//.test(s.url)&&!seen.has(s.url)&&seen.add(s.url));
+ const links=sources.filter(s=>s&&typeof s.label==="string"&&typeof s.url==="string"&&s.url.startsWith("https://")&&!seen.has(s.url)&&seen.add(s.url));
  return '<section aria-label="Quellenlinks"><h2>Quellen</h2><ul>'+links.map(s=>'<li><a href="'+esc(s.url)+'" target="_blank" rel="noopener noreferrer">'+esc(s.label)+'</a></li>').join("")+"</ul></section>";
 }
 function render(){
