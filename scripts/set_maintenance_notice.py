@@ -45,7 +45,7 @@ try:
             with sftp.open(tmp, "rb") as f:
                 if f.read() != changed.encode("utf-8"):
                     raise RuntimeError("Upload-Pruefung fehlgeschlagen")
-            sftp.rename(tmp, remote)
+            sftp.posix_rename(tmp, remote)
             with sftp.open(remote, "rb") as f:
                 if f.read() != changed.encode("utf-8"):
                     raise RuntimeError("Live-Ruecklesepruefung fehlgeschlagen")
