@@ -1,19 +1,23 @@
-name: Originalseite aktualisieren
+name: Hinweis in Bearbeitung auf Originalseite setzen
 on:
+  push:
+    paths:
+      - "scripts/set_maintenance_notice.py"
+      - ".github/workflows/update-existing-site.yml"
   workflow_dispatch:
 permissions:
   contents: read
 jobs:
-  update:
+  notice:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - run: python3 -m pip install 'paramiko==3.5.1'
-      - name: Bestehende Seite sichern und gezielt aktualisieren
+      - name: Originalseite sichern und Hinweis einblenden
         env:
           IONOS_SFTP_HOST: ${{ secrets.IONOS_SFTP_HOST }}
           IONOS_SFTP_USER: ${{ secrets.IONOS_SFTP_USER }}
           IONOS_SFTP_PASSWORD: ${{ secrets.IONOS_SFTP_PASSWORD }}
           IONOS_SFTP_HOSTKEY_SHA256: ${{ secrets.IONOS_SFTP_HOSTKEY_SHA256 }}
-        run: python3 scripts/update_existing_site.py
+        run: python3 scripts/set_maintenance_notice.py
