@@ -1,0 +1,8 @@
+{
+  "test_id": "UYL-EXPORT-2026-11-01",
+  "format": "json",
+  "purpose": "ChatGPT-to-GitHub manual connector write test",
+  "status": "test_only",
+  "generated_date": "2026-11-01",
+  "production_task_modified": false
+}
